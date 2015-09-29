@@ -137,11 +137,11 @@ namespace AssimpSharp.XFile
             if (scene.Materials.Count == 0)
             {
                 var mat = new aiMaterial();
-                mat.ShadingMode = ShadingMode.Gouraund;
+                mat.ShadingMode = ShadingMode.Gouraud;
                 mat.ColorEmissive = new Color4(0, 0, 0, 1);
                 mat.ColorSpecular = new Color4(0, 0, 0, 1);
                 mat.ColorDiffuse = new Color4(0.5f, 0.5f, 0.5f, 1);
-                mat.Shininess = 1;
+                mat.Shininess = 1.401298e-45f;
                 scene.Materials.Add(mat);
             }
         }
@@ -198,19 +198,23 @@ namespace AssimpSharp.XFile
                 return;
             }
 
+            // create a mesh for each mesh-material combination in the source node
             var result = new List<AssimpSharp.Mesh>();
             for (int a = 0; a < meshes.Count; a++)
             {
                 var sourceMesh = meshes[a];
+                // first convert its materials so that we can find them with their index afterwards
                 ConvertMaterials(scene, sourceMesh.Materials);
 
                 int numMaterials = Math.Max(sourceMesh.Materials.Count, 1);
                 for (int b = 0; b < numMaterials; b++)
                 {
+                    // collect the faces belonging to this material
                     var faces = new List<int>();
                     var numVertices = 0;
                     if (sourceMesh.FaceMaterials.Count > 0)
                     {
+                        // if there is a per-face material defined, select the faces with the corresponding material
                         for (int c = 0; c < sourceMesh.FaceMaterials.Count; c++)
                         {
                             if (sourceMesh.FaceMaterials[c] == b)
@@ -222,6 +226,7 @@ namespace AssimpSharp.XFile
                     }
                     else
                     {
+                        // if there is no per-face material, place everything into one mesh
                         for (int c = 0; c < sourceMesh.PosFaces.Count; c++)
                         {
                             faces.Add(c);
@@ -229,14 +234,18 @@ namespace AssimpSharp.XFile
                         }
                     }
 
+                    // no faces/vertices using this material? strange...
                     if (numVertices == 0)
                     {
                         continue;
                     }
 
+                    // create a submesh using this material
                     var mesh = new AssimpSharp.Mesh();
                     result.Add(mesh);
 
+                    // find the material in the scene's material list. Either own material
+                    // or referenced material, it should already have a valid index
                     if (sourceMesh.FaceMaterials.Count > 0)
                     {
                         mesh.MaterialIndex = sourceMesh.Materials[b].SceneIndex;
@@ -246,6 +255,8 @@ namespace AssimpSharp.XFile
                         mesh.MaterialIndex = 0;
                     }
 
+                    // Create properly sized data arrays in the mesh. We store unique vertices per face,
+                    // as specified
                     mesh.NumVertices = numVertices;
                     mesh.Vertices = new Vector3[numVertices];
                     mesh.NumFaces = faces.Count;
@@ -268,7 +279,7 @@ namespace AssimpSharp.XFile
                     mesh.Colors = new Color4[AI_MAX_NUMBER_OF_COLOR_SETS][];
                     for (int c = 0; c < AI_MAX_NUMBER_OF_COLOR_SETS; c++)
                     {
-                        if (sourceMesh.Colors.Length > 0)
+                        if (sourceMesh.Colors[c] != null && sourceMesh.Colors[c].Count > 0)
                         {
                             mesh.Colors[c] = new Color4[numVertices];
                         }
@@ -283,26 +294,41 @@ namespace AssimpSharp.XFile
                         int f = faces[c];
                         var pf = sourceMesh.PosFaces[f];
 
+                        // create face. either triangle or triangle fan depending on the index count
                         var df = mesh.Faces[c] = new AssimpSharp.Face();
                         df.Indices = new int[pf.Indices.Count];
 
+                        // collect vertex data for indices of this face
                         for (int d = 0; d < df.Indices.Length; d++)
                         {
                             df.Indices[d] = newIndex;
                             orgPoints[newIndex] = (int)pf.Indices[d];
 
+                            // Position
                             mesh.Vertices[newIndex] = sourceMesh.Positions[(int)pf.Indices[d]];
 
+                            // Normal, if present
                             if (mesh.HasNormals)
                             {
                                 mesh.Normals[newIndex] = sourceMesh.Normals[(int)sourceMesh.NormalFaces[f].Indices[d]];
                             }
 
+                            // texture coord sets
+                            for (int e = 0; e < AI_MAX_NUMBER_OF_TEXTURECOORDS; e++)
+                            {
+                                if (mesh.HasTextureCoords(e))
+                                {
+                                    var tex = sourceMesh.TexCoords[e][(int)pf.Indices[d]];
+                                    mesh.TextureCoords[e][newIndex] = new Vector3(tex.X, 1.0f - tex.Y, 0.0f);
+                                }
+                            }
+
+                            // vertex color sets
                             for (int e = 0; e < AI_MAX_NUMBER_OF_COLOR_SETS; e++)
                             {
                                 if (mesh.HasVertexColors(e))
                                 {
-                                    //mesh.Colors[e][newIndex] = sourceMesh.Colors[e][(int)pf.Indices[d]];
+                                    mesh.Colors[e][newIndex] = sourceMesh.Colors[e][(int)pf.Indices[d]];
                                 }
                             }
                             newIndex++;
@@ -317,7 +343,7 @@ namespace AssimpSharp.XFile
                     {
                         var obone = bones[c];
 
-                        List<float> oldWeights = new List<float>(sourceMesh.Positions.Count);
+                        var oldWeights = new float[sourceMesh.Positions.Count];
                         for (int d = 0; d < obone.Weights.Count; d++)
                         {
                             oldWeights[(int)obone.Weights[d].Vertex] = obone.Weights[d].Weight;
@@ -367,7 +393,7 @@ namespace AssimpSharp.XFile
             for (int a = 0; a < result.Count; a++)
             {
                 scene.Meshes.Add(result[a]);
-                node.Meshes.Add(scene.Meshes.Count);
+                node.Meshes.Add(scene.Meshes.Count - 1);
             }
         }
 
@@ -379,7 +405,7 @@ namespace AssimpSharp.XFile
         /// <param name="data">The data to read the animations from</param>
         protected void CreateAnimations(AssimpSharp.Scene scene, AssimpSharp.XFile.Scene data)
         {
-            List<AssimpSharp.Animation> newAnims = new List<AssimpSharp.Animation>();
+            var newAnims = new List<AssimpSharp.Animation>();
 
             for (int a = 0; a < data.Anims.Count; a++)
             {
@@ -394,7 +420,7 @@ namespace AssimpSharp.XFile
                 nanim.Name = anim.Name;
                 nanim.Duration = 0;
                 nanim.TicksPreSecond = data.AnimTicksPerSecond;
-                nanim.Channels = new AssimpSharp.NodeAnim[nanim.Channels.Length];
+                nanim.Channels = new AssimpSharp.NodeAnim[anim.Anims.Count];
 
                 for (int b = 0; b < anim.Anims.Count; b++)
                 {
@@ -441,7 +467,7 @@ namespace AssimpSharp.XFile
                     {
                         // separate key sequences for position, rotation, scaling
                         nbone.PositionKeys = new VectorKey[bone.PosKeys.Count];
-                        for(int c = 0; c<nbone.PositionKeys.Length; c++)
+                        for (int c = 0; c < nbone.PositionKeys.Length; c++)
                         {
                             var pos = bone.PosKeys[c].Value;
                             nbone.PositionKeys[c].Time = bone.PosKeys[c].Time;
@@ -450,33 +476,33 @@ namespace AssimpSharp.XFile
 
                         // rotation
                         nbone.RotationKeys = new QuatKey[bone.RotKeys.Count];
-                        for(int c = 0; c < nbone.RotationKeys.Length; c++)
+                        for (int c = 0; c < nbone.RotationKeys.Length; c++)
                         {
-                            var rotmat = Matrix3x3.RotationQuaternion( bone.RotKeys[c].Value);
+                            var rotmat = Matrix3x3.RotationQuaternion(bone.RotKeys[c].Value);
                             nbone.RotationKeys[c].Time = bone.RotKeys[c].Time;
-                            nbone.RotationKeys[c].Value = bone.RotKeys[c].Value;
+                            Quaternion.RotationMatrix(ref rotmat, out nbone.RotationKeys[c].Value);
                             nbone.RotationKeys[c].Value.W *= -1.0f;
                         }
-                        
-				        // longest lasting key sequence determines duration
+
+                        // longest lasting key sequence determines duration
                         nbone.ScalingKeys = new VectorKey[bone.ScaleKeys.Count];
-                        for(int c = 0; c < nbone.ScalingKeys.Length; c++)
+                        for (int c = 0; c < nbone.ScalingKeys.Length; c++)
                         {
                             nbone.ScalingKeys[c] = bone.ScaleKeys[c];
                         }
-                        
-				        // longest lasting key sequence determines duration
+
+                        // longest lasting key sequence determines duration
                         if (bone.PosKeys.Count > 0)
                         {
-                            nanim.Duration = Math.Max(nanim.Duration, bone.PosKeys[bone.PosKeys.Count].Time);
+                            nanim.Duration = Math.Max(nanim.Duration, bone.PosKeys[bone.PosKeys.Count - 1].Time);
                         }
                         if (bone.RotKeys.Count > 0)
                         {
-                            nanim.Duration = Math.Max(nanim.Duration, bone.RotKeys[bone.RotKeys.Count].Time);
+                            nanim.Duration = Math.Max(nanim.Duration, bone.RotKeys[bone.RotKeys.Count - 1].Time);
                         }
                         if (bone.ScaleKeys.Count > 0)
                         {
-                            nanim.Duration = Math.Max(nanim.Duration, bone.ScaleKeys[bone.ScaleKeys.Count].Time);
+                            nanim.Duration = Math.Max(nanim.Duration, bone.ScaleKeys[bone.ScaleKeys.Count - 1].Time);
                         }
                     }
                 }
@@ -505,10 +531,11 @@ namespace AssimpSharp.XFile
             if (numNewMaterials > 0)
             {
                 scene.Materials.Capacity = scene.Materials.Count + numNewMaterials;
+
             }
 
             // convert all the materials given in the array
-            for(int a = 0; a < materials.Count; a++)
+            for (int a = 0; a < materials.Count; a++)
             {
                 XFile.Material oldMat = materials[a];
                 if (oldMat.IsReference)
@@ -526,7 +553,7 @@ namespace AssimpSharp.XFile
 
                     if (oldMat.SceneIndex == int.MaxValue)
                     {
-                        throw(new Exception());
+                        throw (new Exception());
                         oldMat.SceneIndex = 0;
                     }
                     continue;
@@ -536,7 +563,7 @@ namespace AssimpSharp.XFile
                 mat.Name = oldMat.Name;
 
                 var shadeMode = (oldMat.SpecularExponent == 0.0f)
-                    ? AssimpSharp.ShadingMode.Gouraund : ShadingMode.Phong;
+                    ? AssimpSharp.ShadingMode.Gouraud : ShadingMode.Phong;
                 mat.ShadingMode = shadeMode;
 
                 mat.ColorEmissive = new Color4(oldMat.Emissive, 1);
@@ -563,7 +590,7 @@ namespace AssimpSharp.XFile
                 else
                 {
                     int iHM = 0, iNM = 0, iDM = 0, iSM = 0, iAM = 0, iEM = 0;
-                    for(int b = 0; b < oldMat.Textures.Count; b++)
+                    for (int b = 0; b < oldMat.Textures.Count; b++)
                     {
                         var otex = oldMat.Textures[b];
                         var sz = otex.Name;
@@ -581,7 +608,7 @@ namespace AssimpSharp.XFile
                         int sExt = sz.LastIndexOf('.');
                         if (sExt > 0)
                         {
-                            sz = sz.Substring(0, sExt-1) + '\0' + sz.Substring(sExt);
+                            sz = sz.Substring(0, sExt - 1) + '\0' + sz.Substring(sExt);
                         }
 
                         sz = sz.ToLower();
@@ -616,7 +643,7 @@ namespace AssimpSharp.XFile
                 }
                 scene.Materials.Add(mat);
                 //scene.Materials[scene.Materials.Count] = mat;
-                oldMat.SceneIndex = scene.Materials.Count;
+                oldMat.SceneIndex = scene.Materials.Count - 1;
             }
         }
     }

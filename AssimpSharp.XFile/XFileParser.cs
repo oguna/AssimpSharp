@@ -10,6 +10,7 @@ using Color3D = SharpDX.Color3;
 using Vector2D = SharpDX.Vector2;
 using Vector3D = SharpDX.Vector3;
 using Matrix4x4 = SharpDX.Matrix;
+using Quaternion = SharpDX.Quaternion;
 using VectorKey = System.Collections.Generic.KeyValuePair<double, SharpDX.Vector3>;
 using QuatKey = System.Collections.Generic.KeyValuePair<double, SharpDX.Quaternion>;
 using MatrixKey = System.Collections.Generic.KeyValuePair<double, SharpDX.Matrix>;
@@ -325,11 +326,11 @@ namespace AssimpSharp.XFile
             matrix.M11 = ReadFloat(); matrix.M21 = ReadFloat();
             matrix.M31 = ReadFloat(); matrix.M41 = ReadFloat();
             matrix.M12 = ReadFloat(); matrix.M22 = ReadFloat();
-            matrix.M33 = ReadFloat(); matrix.M42 = ReadFloat();
+            matrix.M32 = ReadFloat(); matrix.M42 = ReadFloat();
             matrix.M13 = ReadFloat(); matrix.M23 = ReadFloat();
             matrix.M33 = ReadFloat(); matrix.M43 = ReadFloat();
             matrix.M14 = ReadFloat(); matrix.M24 = ReadFloat();
-            matrix.M33 = ReadFloat(); matrix.M44 = ReadFloat();
+            matrix.M34 = ReadFloat(); matrix.M44 = ReadFloat();
 
             // trailing symbols
             CheckForSemicolon();
@@ -768,7 +769,12 @@ namespace AssimpSharp.XFile
                             if (ReadInt() != 4)
                                 ThrowException("Invalid number of arguments for quaternion key in animation");
 
-                            QuatKey key = new QuatKey((double)time, new SharpDX.Quaternion(ReadFloat(), ReadFloat(), ReadFloat(), ReadFloat()));
+                            var keyValue = new Quaternion();
+                            keyValue.W = ReadFloat();
+                            keyValue.X = ReadFloat();
+                            keyValue.Y = ReadFloat();
+                            keyValue.Z = ReadFloat();
+                            QuatKey key = new QuatKey((double)time, keyValue);
                             animBone.RotKeys.Add(key);
 
                             CheckForSemicolon();
@@ -807,11 +813,11 @@ namespace AssimpSharp.XFile
                             value.M11 = ReadFloat(); value.M21 = ReadFloat();
                             value.M31 = ReadFloat(); value.M41 = ReadFloat();
                             value.M12 = ReadFloat(); value.M22 = ReadFloat();
-                            value.M33 = ReadFloat(); value.M42 = ReadFloat();
+                            value.M32 = ReadFloat(); value.M42 = ReadFloat();
                             value.M13 = ReadFloat(); value.M23 = ReadFloat();
                             value.M33 = ReadFloat(); value.M43 = ReadFloat();
                             value.M14 = ReadFloat(); value.M24 = ReadFloat();
-                            value.M33 = ReadFloat(); value.M44 = ReadFloat();
+                            value.M34 = ReadFloat(); value.M44 = ReadFloat();
                             animBone.TrafoKeys.Add(new MatrixKey(key, value));
                             CheckForSemicolon();
                             break;
@@ -886,7 +892,7 @@ namespace AssimpSharp.XFile
             bool running = true;
             while (running)
             {
-                while ((p < end) && (buffer[p] == ' ' || buffer[p] == '\r' || buffer[p] == '\n'))
+                while ((p < end) && (char.IsSeparator((char)buffer[p]) || char.IsControl((char)buffer[p])))
                 {
                     if (buffer[p] == '\n')
                         lineNumber++;
@@ -1014,7 +1020,7 @@ namespace AssimpSharp.XFile
                 if (p >= end)
                     return s;
 
-                while ((p < end) && !char.IsSeparator((char)buffer[p]))
+                while ((p < end) && !(char.IsSeparator((char)buffer[p]) || char.IsControl((char)buffer[p])))
                 {
                     // either keep token delimiters when already holding a token, or return if first valid char
                     if (buffer[p] == ';' || buffer[p] == '}' || buffer[p] == '{' || buffer[p] == ',')

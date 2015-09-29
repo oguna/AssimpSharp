@@ -125,23 +125,23 @@ namespace AssimpSharp
     public class Mesh
     {
         public const int AI_MAX_NUMBER_OF_COLOR_SETS = 8;
-        public const int AI_MAX_NUMBER_OF_TEXTURECOORDS = 4;
+        public const int AI_MAX_NUMBER_OF_TEXTURECOORDS = 8;
 
         public PrimitiveType PrimitiveTypes;
         public int NumVertices;
         public int NumFaces;
-        public Vector3[] Vertices;
-        public Vector3[] Normals;
-        public Vector3[] Tangents;
-        public Vector3[] Bitangents;
-        public Color4[][] Colors;
+        public Vector3[] Vertices = new Vector3[0];
+        public Vector3[] Normals = new Vector3[0];
+        public Vector3[] Tangents = new Vector3[0];
+        public Vector3[] Bitangents = new Vector3[0];
+        public Color4[][] Colors = new Color4[AI_MAX_NUMBER_OF_COLOR_SETS][];
         public Vector3[][] TextureCoords = new Vector3[AI_MAX_NUMBER_OF_TEXTURECOORDS][];
-        public int[] NumUVComponents;
+        public int[] NumUVComponents = new int[AI_MAX_NUMBER_OF_TEXTURECOORDS];
         public Face[] Faces;
         public int NumBones;
         public Bone[] Bones = new Bone[0];
         public int MaterialIndex;
-        public string Name;
+        public string Name = string.Empty;
         public int NumAnimationMeshes;
         public AnimMesh[] AnimMeshes;
         public bool HasPosition
@@ -173,7 +173,7 @@ namespace AssimpSharp
             }
             else
             {
-                return Colors[index] != null && NumVertices > 0;
+                return Colors[index] != null && Colors[index].Length > 0 && NumVertices > 0;
             }
         }
         public bool HasTextureCoords(int index)

@@ -382,7 +382,7 @@ namespace AssimpSharp.FBX
                 {
                     throw (new Exception());
                 }
-                ReadVertexDataBinormals(out binormals, source, MappingInformationType, ReferenceInformationType);
+                ReadVertexDataColors(out colors[index], source, MappingInformationType, ReferenceInformationType);
             }
         }
 
@@ -535,27 +535,33 @@ namespace AssimpSharp.FBX
             normalsOut = tmp.ToList();
         }
 
-        private void ReadVertexDataColor(out List<Vector4> colorsOut, Scope source, string MappingInformationType, string ReferenceInformationType)
+        private void ReadVertexDataColors(out List<Color4> colorsOut, Scope source, string MappingInformationType, string ReferenceInformationType)
         {
             Vector4[] tmp;
             ResolveVertexDataArray(out tmp, source, MappingInformationType, ReferenceInformationType,
                   "Colors", "ColorIndex", vertices.Count, mappingCounts, mappingOffsets, mappings);
-            colorsOut = tmp.ToList();
+            colorsOut = new List<Color4>(tmp.Length);
+            foreach (var color in tmp)
+            {
+                colorsOut.Add(new Color4(color));
+            }
         }
 
         private void ReadVertexDataTangents(out List<Vector3> tangentsOut, Scope source, string MappingInformationType, string ReferenceInformationType)
         {
+            var str = source.Elements.ContainsKey("Tangents") ? "Tangents" : "Tangent";
             Vector3[] tmp;
             ResolveVertexDataArray(out tmp, source, MappingInformationType, ReferenceInformationType,
-                   "Tangent", "TangentIndex", vertices.Count, mappingCounts, mappingOffsets, mappings);
+                   str, "TangentIndex", vertices.Count, mappingCounts, mappingOffsets, mappings);
             tangentsOut = tmp.ToList();
         }
 
         private void ReadVertexDataBinormals(out List<Vector3> binormalsOut, Scope source, string MappingInformationType, string ReferenceInformationType)
         {
+            var str = source.Elements.ContainsKey("Binormals") ? "Binormals" : "Binormal";
             Vector3[] tmp;
             ResolveVertexDataArray(out tmp, source, MappingInformationType, ReferenceInformationType,
-                "Binormal", "BinormalIndex", vertices.Count, mappingCounts, mappingOffsets, mappings);
+                str, "BinormalIndex", vertices.Count, mappingCounts, mappingOffsets, mappings);
             binormalsOut = tmp.ToList();
         }
 

@@ -56,7 +56,7 @@ namespace AssimpSharp
     public enum ShadingMode
     {
         Flat = 0x1,
-        Gouraund,
+        Gouraud,
         Phong,
         Blinn,
         Toon,

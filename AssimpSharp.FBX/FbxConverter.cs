@@ -29,7 +29,7 @@ namespace AssimpSharp.FBX
 {
     public class FbxConverter
     {
-        public const string MAGIC_NODE_TAG = "MAGIC_NODE_TAG";
+        public const string MAGIC_NODE_TAG = "_$AssimpFbx$";
 
         double CONVERT_FBX_TIME(double time)
         {
@@ -407,7 +407,7 @@ namespace AssimpSharp.FBX
                 return;
             }
             const float angleEpsilon = 1e-6f;
-            result = new Matrix();
+            result = Matrix.Identity;
             var isId = new bool[3] { true, true, true };
             var temp = new Matrix[3];
             if (Math.Abs(rotation.Z) > angleEpsilon)
@@ -540,7 +540,7 @@ namespace AssimpSharp.FBX
             if (ok && postRotation.LengthSquared() > zeroEpsilon)
             {
                 isComplex = true;
-                GetRotationMatrix(rot, postRotation, out chain[(int)TransformationComp.PreRotation]);
+                GetRotationMatrix(rot, postRotation, out chain[(int)TransformationComp.PostRotation]);
             }
 
             Vector3 RotationPivot = PropertyHelper.PropertyGet<Vector3>(props, "RotationPivot", out ok);
@@ -698,21 +698,21 @@ namespace AssimpSharp.FBX
         {
             var geos = model.Geometry;
 
-            int[] meshes = new int[geos.Count];
+            var meshes = new List<int>(geos.Count);
             foreach (var geo in geos)
             {
                 var mesh = geo as MeshGeometry;
                 if (mesh != null)
                 {
                     var indices = ConvertMesh(mesh, model, nodeGlobalTransform);
-                    Array.Copy(indices, meshes, indices.Length);
+                    meshes.AddRange(indices);
                 }
                 else
                 {
                     Debug.WriteLine("ignoring unrecognized geometry: " + geo.Name);
                 }
             }
-            if (meshes.Length > 0)
+            if (meshes.Count > 0)
             {
                 nd.Meshes.AddRange(meshes);
             }
@@ -964,13 +964,13 @@ namespace AssimpSharp.FBX
             var itf = faces.GetEnumerator();
             foreach(var it in mindices)
             {
+                itf.MoveNext();
                 if (it != index)
                 {
                     continue;
                 }
                 ++countFaces;
                 countVertices += (int)itf.Current;
-                itf.MoveNext();
             }
 
             Debug.Assert(countFaces > 0);
@@ -1073,7 +1073,7 @@ namespace AssimpSharp.FBX
                     continue;
                 }
 
-                var f = fac[facIndex++];
+                var f = fac[facIndex++] = new Face();
                 f.Indices = new int[pcount];
                 switch (pcount)
                 {
@@ -1090,7 +1090,7 @@ namespace AssimpSharp.FBX
                         outMesh.PrimitiveTypes |= AssimpSharp.PrimitiveType.Polygon;
                         break;
                 }
-                for (int i = 0; i < pcount; i++, cursor++, inCursor++)
+                for (int i = 0; i < pcount; ++i, ++cursor, ++inCursor)
                 {
                     f.Indices[i] = cursor;
                     if (reverseMappigng.Length > 0)
@@ -1109,20 +1109,20 @@ namespace AssimpSharp.FBX
                     }
                     for (int j = 0; j < numUvs; j++)
                     {
-                        var uvs = mesh.GetTextureCoords(i);
-                        outMesh.TextureCoords[i][cursor] = new Vector3(uvs[inCursor], 0.0f);
+                        var uvs = mesh.GetTextureCoords(j);
+                        outMesh.TextureCoords[j][cursor] = new Vector3(uvs[inCursor], 0.0f);
                     }
-                    for (int j = 0; i < numVcs; i++)
+                    for (int j = 0; j < numVcs; j++)
                     {
-                        var cols = mesh.GetVertexColors(i);
-                        outMesh.Colors[i][cursor] = cols[inCursor];
+                        var cols = mesh.GetVertexColors(j);
+                        outMesh.Colors[j][cursor] = cols[inCursor];
                     }
                 }
             }
 
             ConvertMaterialForMesh(outMesh, model, mesh, index);
 
-            if (processWeights != null)
+            if (processWeights)
             {
                 ConvertWeights(outMesh, model, mesh, nodeGlobalTransform, index, reverseMappigng);
             }
@@ -1601,7 +1601,7 @@ namespace AssimpSharp.FBX
             TrySetTextureProperties(outMat, layeredTextures, "ShininessExponent", aiTextureType.Shininess, mesh);
         }
 
-        private Color4 GetColorPropertyFromMaterial(PropertyTable props, string baseName, out bool result)
+        private Color3 GetColorPropertyFromMaterial(PropertyTable props, string baseName, out bool result)
         {
             result = true;
 
@@ -1609,7 +1609,7 @@ namespace AssimpSharp.FBX
             var diffuse = PropertyHelper.PropertyGet<Vector3>(props, baseName, out ok);
             if (ok)
             {
-                return new Color(diffuse.X, diffuse.Y, diffuse.Z);
+                return new Color3(diffuse.X, diffuse.Y, diffuse.Z);
             }
             else
             {
@@ -1622,36 +1622,36 @@ namespace AssimpSharp.FBX
                         diffuseColor *= diffuseFactor;
                     }
 
-                    return new Color4(diffuseColor.X, diffuseColor.Y, diffuseColor.Z, 0);
+                    return new Color3(diffuseColor.X, diffuseColor.Y, diffuseColor.Z);
                 }
             }
 
             result = false;
-            return new Color4(0, 0, 0, 0);
+            return new Color3(0, 0, 0);
         }
 
         private void SetShadingPropertiesCommon(aiMaterial outMat, PropertyTable props)
         {
             bool ok;
-            Color4 diffuse = GetColorPropertyFromMaterial(props, "Diffuse", out ok);
+            var diffuse = GetColorPropertyFromMaterial(props, "Diffuse", out ok);
             if (ok)
             {
-                outMat.ColorDiffuse = diffuse;
+                outMat.ColorDiffuse = new Color4(diffuse, 1.0f);
             }
-            Color4 emissive = GetColorPropertyFromMaterial(props, "Emissive", out ok);
+            var emissive = GetColorPropertyFromMaterial(props, "Emissive", out ok);
             if (ok)
             {
-                outMat.ColorEmissive = emissive;
+                outMat.ColorEmissive = new Color4(emissive, 1.0f);
             }
-            Color4 ambient = GetColorPropertyFromMaterial(props, "Ambient", out ok);
+            var ambient = GetColorPropertyFromMaterial(props, "Ambient", out ok);
             if (ok)
             {
-                outMat.ColorAmbient = ambient;
+                outMat.ColorAmbient = new Color4(ambient, 1.0f);
             }
-            Color4 specular = GetColorPropertyFromMaterial(props, "Specular", out ok);
+            var specular = GetColorPropertyFromMaterial(props, "Specular", out ok);
             if (ok)
             {
-                outMat.ColorSpecular = specular;
+                outMat.ColorSpecular = new Color4(specular, 1.0f);
             }
             float opacity = PropertyHelper.PropertyGet<float>(props, "Opacity", out ok);
             if (ok)
@@ -1766,8 +1766,11 @@ namespace AssimpSharp.FBX
                 for (int i = 0; i < anim.Channels.Length; i++)
                 {
                     var na = anim.Channels[i];
-                    na.NodeName = newName;
-                    break;
+                    if (na.NodeName == fn)
+                    {
+                        na.NodeName = newName;
+                        break;
+                    }
                 }
             }
         }
@@ -1797,11 +1800,14 @@ namespace AssimpSharp.FBX
                 NodeNames[temp] = true;
 
                 string rit;
-                if (!RenamedNodes.TryGetValue(temp, out rit))
+                if (RenamedNodes.TryGetValue(temp, out rit))
                 {
-                    rit = temp;
+                    return rit;
                 }
-                return rit;
+                else
+                {
+                    return temp;
+                }
             }
 
             bool it_;
@@ -1911,8 +1917,7 @@ namespace AssimpSharp.FBX
 
             if (nodeAnims.Count > 0)
             {
-                anim.Channels = new AssimpSharp.NodeAnim[nodeAnims.Count];
-                throw (new NotImplementedException());
+                anim.Channels = nodeAnims.ToArray();
             }
             else
             {

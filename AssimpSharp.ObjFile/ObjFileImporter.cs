@@ -381,13 +381,13 @@ namespace AssimpSharp.ObjFile
                         sm = ShadingMode.NoShading;
                         break;
                     case 1:
-                        sm = ShadingMode.Gouraund;
+                        sm = ShadingMode.Gouraud;
                         break;
                     case 2:
                         sm = ShadingMode.Phong;
                         break;
                     default:
-                        sm = ShadingMode.Gouraund;
+                        sm = ShadingMode.Gouraud;
                         Debug.WriteLine("OBJ: unexpected illumination model (0-2 recognized)");
                         break;
                 }

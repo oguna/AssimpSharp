@@ -82,15 +82,15 @@ namespace AssimpSharp
             // mirror positions, normals and stuff along the Z axis
             for (int i = 0; i < mesh.Vertices.Length; i++)
             {
-                mesh.Vertices[i].Z *= -1;
+                mesh.Vertices[i].Z *= -1.0f;
                 if (mesh.HasNormals)
                 {
-                    mesh.Normals[i].Z *= -1;
+                    mesh.Normals[i].Z *= -1.0f;
                 }
                 if (mesh.HasTangentsAndBitangets)
                 {
-                    mesh.Tangents[i].Z *= -1;
-                    mesh.Bitangents[i].Z *= -1;
+                    mesh.Tangents[i].Z *= -1.0f;
+                    mesh.Bitangents[i].Z *= -1.0f;
                 }
             }
 
@@ -111,7 +111,7 @@ namespace AssimpSharp
             {
                 for(int i=0; i<mesh.Vertices.Length; i++)
                 {
-                    mesh.Bitangents[i] *= -1;
+                    mesh.Bitangents[i] *= -1.0f;
                 }
             }
         }
@@ -129,7 +129,7 @@ namespace AssimpSharp
             // position keys
             for (int a = 0; a < anim.PositionKeys.Length; a++)
             {
-                anim.PositionKeys[a].Value.Z *= 1;
+                anim.PositionKeys[a].Value.Z *= -1.0f;
             }
 
             // rotation keys
@@ -142,8 +142,8 @@ namespace AssimpSharp
                 aiQuaternion rotquat( rotmat);
                 pAnim->mRotationKeys[a].mValue = rotquat;
                 */
-                anim.RotationKeys[a].Value.X *= -1;
-                anim.RotationKeys[a].Value.Y *= -1;
+                anim.RotationKeys[a].Value.X *= -1.0f;
+                anim.RotationKeys[a].Value.Y *= -1.0f;
             }
         }
     }

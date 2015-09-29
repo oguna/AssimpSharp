@@ -44,7 +44,7 @@ namespace AssimpSharp.XFile
     /// <summary>
     /// Helper structure representing a XFile material
     /// </summary>
-    public struct Material
+    public class Material
     {
         public string Name;
 
@@ -128,7 +128,7 @@ namespace AssimpSharp.XFile
         public Mesh(string name = "")
         {
             uint AI_MAX_NUMBER_OF_TEXTURECOORDS = 4;
-            uint AI_MAX_NUMBER_OF_COLOR_SETS = 4;
+            uint AI_MAX_NUMBER_OF_COLOR_SETS = 8;
             Name = name;
             Positions = new List<Vector3>();
             PosFaces = new List<Face>();
@@ -151,7 +151,7 @@ namespace AssimpSharp.XFile
     {
         public string Name;
 
-        public Matrix4x4 TrafoMatrix;
+        public Matrix4x4 TrafoMatrix = Matrix4x4.Identity;
 
         public Node Parent;
 

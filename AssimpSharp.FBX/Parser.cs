@@ -489,7 +489,7 @@ namespace AssimpSharp.FBX
             {
                 throw (new ParseException("number of floats is not a multiple of four (4)", el));
             }
-            for (int i = 0; i < a.Tokens.Count; i++)
+            for (int i = 0; i < a.Tokens.Count;)
             {
                 Vector4 v = new Vector4();
                 v.X = Parser.ParseTokenAsFloat(a.Tokens[i++]);

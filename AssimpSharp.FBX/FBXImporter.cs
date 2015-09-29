@@ -80,7 +80,7 @@ namespace AssimpSharp.FBX
         }
         public static void LogWarn(string message)
         {
-            throw (new Exception(message));
+            Debug.WriteLine(message);
         }
         public static void LogInfo(string message)
         {

@@ -10,9 +10,15 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            var unit = new XFileTest("../../models/x/test.x");
-            unit.SetUp();
-            unit.TestCameras();
+            var test = new FbxFileTest("../../models-nonbsd/FBX/2013_ASCII/COLLADA.fbx");
+            test.SetUp();
+            test.TestAnimation();
+            test.TestMeshes();
+            test.TestMaterials();
+            test.TestCameras();
+            test.TestTextures();
+            test.TestNodes();
+            test.TestLights();
         }
     }
 }

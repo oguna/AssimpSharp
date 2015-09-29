@@ -16,9 +16,9 @@ namespace Test
         public static void AreEqual(Assimp.Color4D a, SharpDX.Color4 b)
         {
             Assert.AreEqual(a.A, b.Alpha);
-            Assert.AreEqual(a.A, b.Red);
-            Assert.AreEqual(a.A, b.Green);
-            Assert.AreEqual(a.A, b.Blue);
+            Assert.AreEqual(a.R, b.Red);
+            Assert.AreEqual(a.G, b.Green);
+            Assert.AreEqual(a.B, b.Blue);
         }
 
         public static void AreEqual(Assimp.Vector2D a, SharpDX.Vector2 b)
@@ -29,9 +29,9 @@ namespace Test
 
         public static void AreEqual(Assimp.Vector3D a, SharpDX.Vector3 b)
         {
-            AreEqual(a.X, b.X);
-            AreEqual(a.Y, b.Y);
-            AreEqual(a.Z, b.Z);
+            AreNearEqual(a.X, b.X);
+            AreNearEqual(a.Y, b.Y);
+            AreNearEqual(a.Z, b.Z);
         }
 
         public static void AreEqual(Assimp.Vector3D[] a, SharpDX.Vector3[] b)
@@ -43,22 +43,44 @@ namespace Test
             }
         }
 
-        public static void AreEqual(float a, float b)
+        public static void AreNearEqual(float a, float b)
         {
-            Assert.Less(Math.Abs(a - b), SharpDX.MathUtil.ZeroTolerance);
+            if (!MathUtil.NearEqual(a, b))
+            {
+                throw (new AssertionException(string.Format("expected: {0}, but {1}", a, b)));
+            }
         }
 
         public static void AreEqual(Assimp.Matrix4x4 a, SharpDX.Matrix b)
         {
-            for (int row = 0; row < 4; row++)
-            {
-                for (int column = 0; column < 4; column++)
-                {
-                    Assert.AreEqual(a[column, row], b[column, row]);
-                }
-            }
+            Vector3D transA;
+            Vector3 transB;
+            Vector3D scaleA;
+            Vector3 scaleB;
+            Assimp.Quaternion rotA;
+            SharpDX.Quaternion rotB;
+            a.Decompose(out scaleA, out rotA, out transA);
+            b.Decompose(out scaleB, out rotB, out transB);
+            AreEqual(transA, transB);
+            AreEqual(rotA, rotB);
+            AreEqual(scaleA, scaleB);
+            //AreNearEqual(a.A1, b.M11);
+            //AreNearEqual(a.A2, b.M12);
+            //AreNearEqual(a.A3, b.M13);
+            //AreNearEqual(a.A4, b.M14);
+            //AreNearEqual(a.B1, b.M21);
+            //AreNearEqual(a.B2, b.M22);
+            //AreNearEqual(a.B3, b.M23);
+            //AreNearEqual(a.B4, b.M24);
+            //AreNearEqual(a.C1, b.M31);
+            //AreNearEqual(a.C2, b.M32);
+            //AreNearEqual(a.C3, b.M33);
+            //AreNearEqual(a.C4, b.M34);
+            //AreNearEqual(a.D1, b.M41);
+            //AreNearEqual(a.D2, b.M42);
+            //AreNearEqual(a.D3, b.M43);
+            //AreNearEqual(a.D4, b.M44);
         }
-
 
         public static void AreEqual(List<Assimp.Vector3D> a, SharpDX.Vector3[] b)
         {
@@ -71,10 +93,10 @@ namespace Test
 
         public static void AreEqual(Assimp.Quaternion a, SharpDX.Quaternion b)
         {
-            Assert.AreEqual(a.X, b.X);
-            Assert.AreEqual(a.Y, b.Y);
-            Assert.AreEqual(a.Z, b.Z);
-            Assert.AreEqual(a.W, b.W);
+            AreNearEqual(a.X, b.X);
+            AreNearEqual(a.Y, b.Y);
+            AreNearEqual(a.Z, b.Z);
+            AreNearEqual(a.W, b.W);
         }
 
         public static void AreEqual(Color3D a, Vector3 b)
@@ -82,6 +104,15 @@ namespace Test
             Assert.AreEqual(a.R, b.X);
             Assert.AreEqual(a.G, b.Y);
             Assert.AreEqual(a.B, b.Z);
+        }
+
+        internal static void AreEqual(List<Color4D> a, Color4[] b)
+        {
+            Assert.AreEqual(a.Count, b.Length);
+            for(int i=0; i<a.Count; i++)
+            {
+                AreEqual(a[i], b[i]);
+            }
         }
     }
 }

@@ -51,6 +51,9 @@
     <Compile Include="BaseImporter.cs" />
     <Compile Include="BaseProcess.cs" />
     <Compile Include="Camera.cs" />
+    <Compile Include="Exporter.cs" />
+    <Compile Include="ExportFormatDesc.cs" />
+    <Compile Include="ExportProperties.cs" />
     <Compile Include="FlipWindingOrderProcess.cs" />
     <Compile Include="MakeLeftHandedProcess.cs" />
     <Compile Include="DeadlyImportError.cs" />

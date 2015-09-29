@@ -33,7 +33,7 @@ namespace AssimpView
                 Tokenizer.Tokenize(out tokens, input);
             }
             var parser = new Parser(tokens, isBinary);
-            var settings = new ImporterSettings();
+            var settings = ImporterSettings.Default;
             var doc = new Document(parser, settings);
             FbxConverter.ConvertToScene(out scene, doc);
             var result = new List<FbxMesh>();

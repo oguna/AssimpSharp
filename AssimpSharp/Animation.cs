@@ -66,7 +66,7 @@ namespace AssimpSharp
         public string Name;
         public double Duration = -1;
         public double TicksPreSecond;
-        public NodeAnim[] Channels;
-        public MeshAnim[] MeshChannels;
+        public NodeAnim[] Channels = new NodeAnim[0];
+        public MeshAnim[] MeshChannels = new MeshAnim[0];
     }
 }

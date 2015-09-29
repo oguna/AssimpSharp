@@ -18,7 +18,7 @@ namespace Test
         [TestFixtureSetUp]
         public void LoadFile()
         {
-            var file = "../../../models_nonbsd/2013_ASCII/Cinema4D.fbx";
+            var file = "../../models-nonbsd/FBX/2013_ASCII/Cinema4D.fbx";
             byte[] input;
             using (var stream = new FileStream(file, FileMode.Open))
             {

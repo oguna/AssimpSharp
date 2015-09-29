@@ -77,12 +77,11 @@
   <ItemGroup>
     <Compile Include="FbxFileTest.cs" />
     <Compile Include="MathAssert.cs" />
-    <Compile Include="SpeedComparisonWithAssimpNet.cs" />
-    <Compile Include="FileTest.cs" />
+    <Compile Include="SpeedTest.cs" />
+    <Compile Include="XFileTest.cs" />
     <Compile Include="DocumentTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="XFileTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
