@@ -21,19 +21,7 @@ namespace AssimpSharp.FBX
         {
             get
             {
-                Property prop = props[name];
-                if (prop == null)
-                {
-                    return defaultValue;
-                }
-                //TypedProperty<T> tprop = prop.As<TypedProperty<T>>();
-                dynamic v = prop;
-                var tprop = new TypedProperty<T>((T)v.Value);
-                if (tprop == null)
-                {
-                    return defaultValue;
-                }
-                return tprop.Value;
+                return PropertyHelper.PropertyGet(props, name, defaultValue);
             }
         }
     }
