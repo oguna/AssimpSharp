@@ -12,6 +12,12 @@ This can parse the following formats:
 - OBJ
 - X
 
+## Assimp
+This code is based on Assimp v3.2 (c318d64).
+
+I manually built assim-net for the latest assimp.
+AssimpNet passed all tests with Assimp v3.2.
+
 ## Problem
 
 This library has some problems.
