@@ -98,7 +98,6 @@ namespace AssimpSharp.XFile
                 MemoryStream stream = new MemoryStream(buffer);
                 stream.Position += 16;
                 stream.Position += 6;
-                long p = stream.Position;
                 long p1 = stream.Position;
                 uint estOut = 0;
                 while (p1 + 3 < end)
