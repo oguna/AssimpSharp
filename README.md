@@ -30,7 +30,7 @@ This library has some problems.
 
 Build solution, and get AssimpView.exe in build output directory.
 
-Run AssimpView.exe with commandline argument `../../../test/models_nonbsd/FBX/2013_ASCII/duckFixed.fbx`,
+Run AssimpView.exe with commandline argument `../../../../test/models-nonbsd/FBX/2013_ASCII/duckFixed.fbx`,
 then you can see duck.
 
 ## License
