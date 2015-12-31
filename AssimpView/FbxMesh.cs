@@ -4,73 +4,52 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using AssimpSharp;
 using SharpDX;
-using SharpDX.Toolkit;
-using SharpDX.Toolkit.Graphics;
-using Buffer = SharpDX.Toolkit.Graphics.Buffer;
+using SharpDX.Direct3D;
+using SharpDX.Direct3D11;
+using SharpDX.DXGI;
+using Buffer = SharpDX.Direct3D11.Buffer;
+using Device = SharpDX.Direct3D11.Device;
 
 namespace AssimpView
 {
     class FbxMesh
     {
         private BasicEffect basicEffect;
-        private Buffer<VertexPositionNormalTexture> vertices;
-        private Buffer<int> indices;
-        private VertexInputLayout inputLayout;
-        private GraphicsDevice GraphicsDevice;
-        private string path;
-        private BoundingSphere boundingSphere;
-        private BoundingBox boundingBox;
+        private Buffer vertices;
+        private Buffer indices;
+        private Device device;
+        private int indexCount;
 
-        public FbxMesh(AssimpSharp.Mesh mesh, AssimpSharp.Material mat, GraphicsDevice device, string path)
+        private string path;
+
+        public FbxMesh(AssimpSharp.Mesh mesh, AssimpSharp.Material mat, Device device, string path)
         {
-            this.GraphicsDevice = device;
+            this.device = device;
             this.path = path;
             LoadMesh(mesh);
             LoadMaterial(mat);
         }
-        public FbxMesh(GraphicsDevice device)
+        public FbxMesh(Device device)
         {
-            this.GraphicsDevice = device;
+            this.device = device;
             LoadCube();
-        }
-
-        public BoundingSphere BoundingSphere
-        {
-            get
-            { 
-                return BoundingSphere;
-            }
-        }
-
-        public BoundingBox BoundingBox
-        { 
-            get
-            {
-                return boundingBox;
-            }
         }
 
         public void LoadMaterial(AssimpSharp.Material material)
         {
             // Creates a basic effect
-            basicEffect = new BasicEffect(GraphicsDevice)
-            {
-                VertexColorEnabled = false,
-                View = Matrix.LookAtRH(new Vector3(0, 0, 500), new Vector3(0, 0, 0), Vector3.UnitY),
-                Projection = Matrix.PerspectiveFovRH((float)Math.PI / 4.0f, (float)GraphicsDevice.BackBuffer.Width / GraphicsDevice.BackBuffer.Height, 0.1f, 100.0f),
-                World = Matrix.Identity,
-                PreferPerPixelLighting = true
-            };
-            if (material.TextureDiffuse != null)
-            {
-                basicEffect.Texture = Texture2D.Load(GraphicsDevice, Path.Combine(Path.GetDirectoryName(path), material.TextureDiffuse.TextureBase));
-                basicEffect.TextureEnabled = true;
-            }
-            if (material.ColorDiffuse.HasValue)
-            {
-                basicEffect.DiffuseColor = material.ColorDiffuse.Value.ToVector4();
-            }
+            basicEffect = new BasicEffect(device);
+            //if (material.TextureDiffuse != null)
+            //{
+            //    basicEffect.Texture = Texture2D.Load(GraphicsDevice, Path.Combine(Path.GetDirectoryName(path), material.TextureDiffuse.TextureBase));
+            //    basicEffect.TextureEnabled = true;
+            //}
+            //if (material.ColorDiffuse.HasValue)
+            //{
+            //    basicEffect.DiffuseColor = material.ColorDiffuse.Value.ToVector4();
+            //}
         }
 
         public void LoadMesh(AssimpSharp.Mesh mesh)
@@ -82,8 +61,6 @@ namespace AssimpView
                 vertexSource[i].Normal = mesh.Normals[i];
                 vertexSource[i].TextureCoordinate = Vector2.Zero;
             }
-            boundingSphere = BoundingSphere.FromPoints(mesh.Vertices);
-            boundingBox = BoundingBox.FromPoints(mesh.Vertices);
             if (mesh.HasTextureCoords(0))
             {
                 var channel = mesh.TextureCoords[0];
@@ -93,7 +70,16 @@ namespace AssimpView
                     vertexSource[i].TextureCoordinate.Y = 1 - channel[i].Y;
                 }
             }
-            vertices = Buffer.Vertex.New(GraphicsDevice, vertexSource);
+            var vbd = new BufferDescription()
+            {
+                BindFlags = BindFlags.VertexBuffer,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = VertexPositionNormalTexture.Size * vertexSource.Length,
+                Usage = ResourceUsage.Default,
+                StructureByteStride = VertexPositionNormalTexture.Size,
+            };
+            vertices = Buffer.Create(device, vertexSource, vbd);
 
             var indexSource = new List<int>();
             for(int i=0; i<mesh.Faces.Length; i++)
@@ -129,10 +115,17 @@ namespace AssimpView
                     throw (new Exception("invalid vertex count of polygon"));
                 }
             }
-            indices = Buffer.Index.New(GraphicsDevice, indexSource.ToArray());
-
-            inputLayout = VertexInputLayout.FromBuffer(0, vertices);
-
+            var ibd = new BufferDescription()
+            {
+                BindFlags = BindFlags.IndexBuffer,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = Utilities.SizeOf<int>() * indexSource.Count,
+                Usage = ResourceUsage.Default,
+                StructureByteStride = Utilities.SizeOf<int>(),
+            };
+            indices = Buffer.Create(device, indexSource.ToArray(), ibd);
+            indexCount = indexSource.Count;
         }
 
         public void LoadCube()
@@ -197,23 +190,17 @@ namespace AssimpView
             //inputLayout = VertexInputLayout.FromBuffer(0, vertices);
         }
 
-        public void Draw(GameTime gameTime, Matrix transform)
+        public void Draw(float elapsedTime, Matrix view, Matrix projection, Matrix world, DeviceContext context)
         {
-            // Rotate the cube.
-            var time = (float)gameTime.TotalGameTime.TotalSeconds;
-            basicEffect.World = transform;
-            //basicEffect.World = Matrix.RotationX(time) * Matrix.RotationY(time * 2.0f) * Matrix.RotationZ(time * .7f);
-            basicEffect.Projection = Matrix.PerspectiveFovRH((float)Math.PI / 4.0f, (float)GraphicsDevice.BackBuffer.Width / GraphicsDevice.BackBuffer.Height, 0.1f, 1000.0f);
-            basicEffect.EnableDefaultLighting();
-
-            // Setup the vertices
-            GraphicsDevice.SetVertexBuffer(vertices);
-            GraphicsDevice.SetVertexInputLayout(inputLayout);
-            GraphicsDevice.SetIndexBuffer(indices, true);
-
-            // Apply the basic effect technique and draw the rotating cube
-            basicEffect.CurrentTechnique.Passes[0].Apply();
-            GraphicsDevice.DrawIndexed(PrimitiveType.TriangleList, indices.ElementCount);
+            basicEffect.World = world;
+            basicEffect.View = view;
+            basicEffect.Projection = projection;
+            basicEffect.Apply(context);
+            context.InputAssembler.SetVertexBuffers(0,
+                new VertexBufferBinding(vertices, VertexPositionNormalTexture.Size, 0));
+            context.InputAssembler.SetIndexBuffer(indices, Format.R32_UInt, 0);
+            context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
+            context.DrawIndexed(indexCount, 0, 0);
         }
     }
 }

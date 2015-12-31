@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 using System.IO;
 using AssimpSharp;
 using AssimpSharp.FBX;
-using SharpDX.Toolkit.Graphics;
+using SharpDX.Direct3D11;
 
 namespace AssimpView
 {
     static class FbxMeshLoader
     {
-        public static List<FbxMesh> Load(string path, GraphicsDevice device, out Scene scene)
+        public static List<FbxMesh> Load(string path, Device device, out Scene scene)
         {
 
             byte[] input;
